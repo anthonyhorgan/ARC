@@ -5,9 +5,6 @@ import json
 import numpy as np
 import re
 from itertools import product
-import torch
-from torch import nn
-from matplotlib import pyplot as plt
 
 ### YOUR CODE HERE: write at least three functions which solve
 ### specific tasks by transforming the input x and returning the
@@ -40,6 +37,7 @@ class Conv2d:
 
 
 def solve_6e19193c(x):
+    # bird tails
     colour_number = np.max(x) # get colour to paint with. only one colour used per example (other than black)
     ret_x = np.copy(x)
     # sources of projectile
@@ -82,38 +80,6 @@ def solve_6e19193c(x):
     return ret_x
 
 
-def solve_28e73c20(x):
-    # spiral
-    ret_x = np.ones_like(x) * 3
-    ret_x = np.pad(ret_x, ((1, 1), (1, 1)), "constant", constant_values=((0, 0), (0, 0)))
-    start_x = 1
-    start_y = 2
-    command_mode_dict = {"east": {"ahead": np.array([0, 1]), "right": np.array([1, 0])},
-                         "south": {"ahead": np.array([1, 0]), "right": np.array([0, -1])},
-                         "west": {"ahead": np.array([0, -1]), "right": np.array([-1, 0])},
-                         "north": {"ahead": np.array([-1, 0]), "right": np.array([0, 1])}
-                         }
-
-    start_idx = np.array([start_y, start_x])
-    curr_idx = start_idx
-    at_least_one_step_taken = True
-    while at_least_one_step_taken:
-        at_least_one_step_taken = False
-        for mode, mode_dict in command_mode_dict.items():
-            while True:
-                ret_x[curr_idx[0], curr_idx[1]] = 0     # colour current square black
-                ahead = curr_idx + mode_dict["ahead"]
-                two_ahead_idx = curr_idx + 2 * mode_dict["ahead"]
-                ahead_right_idx = curr_idx + mode_dict["ahead"] + mode_dict["right"]
-                if ret_x[two_ahead_idx[0], two_ahead_idx[1]] == 0 or ret_x[ahead_right_idx[0], ahead_right_idx[1]] == 0 or ret_x[ahead[0], ahead[1]] == 0:
-                    break
-                at_least_one_step_taken = True
-                curr_idx = curr_idx + mode_dict["ahead"]
-
-    ret_x = ret_x[1:-1, 1:-1] # remove padding
-    return ret_x
-
-
 def fill(a, pos, colour):
     height, width = a.shape
     y, x = pos
@@ -133,6 +99,7 @@ def fill(a, pos, colour):
 
 
 def solve_83302e8f(x):
+    # maze fill
     ret_x = np.copy(x)
     garden_colour = 3
     path_colour = 4
