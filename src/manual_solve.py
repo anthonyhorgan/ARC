@@ -16,19 +16,25 @@ from itertools import product
 # Student ID:       17452572
 # Github repo url:  https://github.com/anthonyhorgan/ARC.git
 
+
 class Conv2d:
-    def __init__(self, kernel_shape, kernel_value=None):
-        self.height = kernel_shape[0]
-        self.width = kernel_shape[1]
-        if kernel_value is None:
-            self.kernel = np.random.rand(kernel_shape)
-        else:
-            self.kernel = kernel_value
+    '''
+    This is a simplified version of a 2d convolution used in deep learning and image processing
+    '''
+    def __init__(self, kernel_value):
+        '''
+        kernel_value: list of lists or 2d array denoting the values the kernel should have
+        '''
+        self.kernel = kernel_value
+        self.height = len(kernel_value)
+        self.width = len(kernel_value[0])
 
     def __call__(self, x):
+        # calculate output shape
         output_height = x.shape[0] - self.height + 1
         output_width = x.shape[1] - self.width + 1
         ret_x = np.zeros((output_height, output_width))
+        # perform convolution operation
         for i in range(0, output_height):
             for j in range(0, output_width):
                 ret_x[i, j] = np.sum(self.kernel * x[i:i + self.height, j:j + self.width])
@@ -37,16 +43,20 @@ class Conv2d:
 
 
 def solve_6e19193c(x):
+    '''
+    All training and test grids are solved correctly
+    Bird tails
+    '''
     # bird tails
     colour_number = np.max(x) # get colour to paint with. only one colour used per example (other than black)
     ret_x = np.copy(x)
     # sources of projectile
     # pad left right top bottom
     sources = [
-        {"conv": Conv2d((2, 2), np.array([[1, 1], [1, 0]])), "pad_width": ((1, 0), (1, 0)), "direction": np.array([1, 1])},
-        {"conv": Conv2d((2, 2), np.array([[1, 1], [0, 1]])), "pad_width": ((1, 0), (0, 1)), "direction": np.array([1, -1])},
-        {"conv": Conv2d((2, 2), np.array([[0, 1], [1, 1]])), "pad_width": ((0, 1), (0, 1)), "direction": np.array([-1, -1])},
-        {"conv": Conv2d((2, 2), np.array([[1, 0], [1, 1]])), "pad_width": ((0, 1), (1, 0)), "direction": np.array([-1, 1])},
+        {"conv": Conv2d(np.array([[1, 1], [1, 0]])), "pad_width": ((1, 0), (1, 0)), "direction": np.array([1, 1])},
+        {"conv": Conv2d(np.array([[1, 1], [0, 1]])), "pad_width": ((1, 0), (0, 1)), "direction": np.array([1, -1])},
+        {"conv": Conv2d(np.array([[0, 1], [1, 1]])), "pad_width": ((0, 1), (0, 1)), "direction": np.array([-1, -1])},
+        {"conv": Conv2d(np.array([[1, 0], [1, 1]])), "pad_width": ((0, 1), (1, 0)), "direction": np.array([-1, 1])},
     ]
 
     projectiles = []
@@ -81,9 +91,18 @@ def solve_6e19193c(x):
 
 
 def fill(a, pos, colour):
+    '''
+    Helper function used in solve_83302e8f
+    Recursively fills in a black region (i.e. values are 0) in an array
+    Think of this function as the fill tool in MSPaint
+    a: input array
+    pos: current position to colour
+    colour: which colour to paint with
+    '''
     height, width = a.shape
     y, x = pos
-    a[y, x] = colour
+    a[y, x] = colour    # colour in current position
+    # If any of the cells beside the current cell (orthogonal directions) are black, call fill on that cell
     # check east
     if x + 1 < width and not a[y, x + 1]:
         fill(a, (y, x + 1), colour)
@@ -99,37 +118,57 @@ def fill(a, pos, colour):
 
 
 def solve_83302e8f(x):
-    # maze fill
-    ret_x = np.copy(x)
-    garden_colour = 3
-    path_colour = 4
+    '''
+    Colour in the maze
+    The input array is divided up into equally-sized square regions.
+    These regions are divided by walls. There are gaps in the wall which connect some regions. I will call these
+    connected regions paths
+    Some regions are completely surrounded by walls. I will call these regions gardens.
+    To solve the problem, we need to colour all of the path regions yellow and colour all of the garden regions green.
+
+    All training and test grids are solved correctly
+    '''
+    ret_x = np.copy(x)  # deep copy np array
+    garden_colour = 3   # green
+    path_colour = 4     # yellow
 
     x_grid = np.zeros_like(x)
-    # print(a[0])
-    grid_colour = np.max(x)
+    grid_colour = np.max(x)     # find out what colour the walls are. (the wall cells are the only non-black cells in the input)
     height, width = x.shape
+    # Construct an array of "completed walls". i.e. fill in the gaps in the walls from the input array
+    # We can deduce what the completed walls should look like by going around the cells at the edges
+    #     (i.e. cells where x=0 or x=-1 or y=0 or y=-1), if a cell contains a wall, then fill in the row or column
+    #     with walls
     for i, j in zip(*np.where(x)):
         if j == 0 or j == width - 1:
             x_grid[:, i] = grid_colour
         if i == 0 or i == height - 1:
             x_grid[j, :] = grid_colour
 
+    # identify the gaps in the walls in the input array by comparing it with the completed walls array
     starting_points = np.where(x != x_grid)
+    # set these "gaps" as starting points for the paths and fill in the paths from there
     for starting_point in zip(*starting_points):
         fill(ret_x, starting_point, path_colour)
+    # once paths are coloured in, every black cell is a garden, so colour it in green
     ret_x[np.where(ret_x == 0)] = garden_colour
-    # print(ret_x)
-    # plt.figure()
-    # plt.imshow(ret_x)
-    # plt.show()
-    # exit()
     return ret_x
 
 
 def solve_90c28cc7(x):
+    '''
+    Shrink Pattern
+    The input array contains a rectangle made up of several regions.
+    Each region is made up of several cells of the same colour
+    The task is to represent each region as a single cell.
+    The colour colour and position of each cell in the output should correspond to a region in the input.
+
+    All training and test grids are solved correctly
+    '''
     x = np.copy(x)
 
     # remove black squares from input
+    # if all the cells in a row or column of x are black, then delete that row or column
     rows = []
     cols = []
     for i in range(x.shape[0]):
@@ -142,10 +181,13 @@ def solve_90c28cc7(x):
     x = np.delete(x, rows, axis=0)
     x = np.delete(x, cols, axis=1)
 
-    # get shape
+    # get new shape (after removing black)
     x_height, x_width = x.shape
 
-    vert_idxs = [0]
+    # We need to find the region borders
+
+    # find the horizontal region borders
+    vert_idxs = [0]     # list to store the column indexes where a new region starts
     ref_slice = x[0]
     for i in range(1, x_height):
         slice = x[i]
@@ -153,7 +195,8 @@ def solve_90c28cc7(x):
             ref_slice = slice
             vert_idxs.append(i)
 
-    horiz_idxs = [0]
+    # find the horizontal region borders
+    horiz_idxs = [0]    # list to store the row indexes where a new region starts
     ref_slice = x[:, 0]
     for j in range(1, x_width):
         slice = x[:, j]
@@ -162,9 +205,11 @@ def solve_90c28cc7(x):
             horiz_idxs.append(j)
 
     ret_x = np.zeros((len(vert_idxs), len(horiz_idxs)), dtype=np.int32)
-    # TODO change variable names
-    for (big_i, big_j), (small_i, small_j) in zip(product(vert_idxs, horiz_idxs), product(range(len(vert_idxs)), range(len(horiz_idxs)))):
-        # print(big_i, big_j, "     ", small_i, small_j)
+    big_idxs = product(vert_idxs, horiz_idxs)                           # coordinates of top left cell of each region
+    small_idxs = product(range(len(vert_idxs)), range(len(horiz_idxs))) # coordinates of every cell in output
+
+    # output cell colour = colour of top left cell of region corresponding to output cell
+    for (big_i, big_j), (small_i, small_j) in zip(big_idxs, small_idxs):
         ret_x[small_i, small_j] = x[big_i, big_j]
     return ret_x
 
