@@ -1,12 +1,16 @@
-# The Abstraction and Reasoning Corpus (ARC)
+# Solutions for The Abstraction and Reasoning Corpus (ARC)
 
-This repository contains the ARC task data, as well as a browser-based interface for humans to try their hand at solving the tasks manually.
+In this repo, I solve some of the problems by hand from the ARC.  
 
-*"ARC can be seen as a general artificial intelligence benchmark, as a program synthesis benchmark, or as a psychometric intelligence test. It is targeted at both humans and artificially intelligent systems that aim at emulating a human-like form of general fluid intelligence."*
+Solutions are available for the following tasks in the training set:  
+ - 6e19193c
+ - 83302e8f
+ - 90c28cc7
 
-A complete description of the dataset, its goals, and its underlying logic, can be found in: [The Measure of Intelligence](https://arxiv.org/abs/1911.01547).
-
-As a reminder, a test-taker is said to solve a task when, upon seeing the task for the first time, they are able to produce the correct output grid for *all* test inputs in the task (this includes picking the dimensions of the output grid). For each test input, the test-taker is allowed 3 trials (this holds for all test-takers, either humans or AI).
+The solutions can be found in the file:
+```buildoutcfg
+src/manual_solve.py
+```
 
 
 ## Task file format
