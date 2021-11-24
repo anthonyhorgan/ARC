@@ -44,15 +44,29 @@ class Conv2d:
 
 def solve_6e19193c(x):
     '''
+    The input array contains a variable number of v shapes made up of 3 cells. I call these shapes cannons.
+    The cannons can be oriented to face 4 different directions.
+    SE ■■  SW ■■  NW  ■  NE■
+       ■       ■     ■■    ■■
+    Define the center of a cannon to be the cell which, if filled in would transform the v shape into a square
+    Then we must draw the path of a projectile fired from the center in the direction that the cannon is facing.
+    Don't draw on the center itself
+
     All training and test grids are solved correctly
-    Bird tails
     '''
     # bird tails
     colour_number = np.max(x) # get colour to paint with. only one colour used per example (other than black)
     ret_x = np.copy(x)
-    # sources of projectile
-    # pad left right top bottom
-    sources = [
+    # Step 1. Identify the position and direction of each cannon in the input
+    # for each of the 4 different cannon orientations, we define
+    #   - a convolution with a kernel that will match the pattern of a cannon pointing in one of the 4 directions,
+    #   - the padding to apply to the output of the convolution in order to identify the center of the cannon,
+    #   - the direction of the cannon
+    # The kernel size will be (2, 2) since we are matching a 2x2 pattern.
+    # If the input to the convolution is (n, n) then the output will be (n-1, n-1) will have zero in each cell except
+    # where the pattern was detected. The pad_width determines on which sides of the output to append a row/column of
+    # zeros. This will move the non-zero cell to be in the same coordinates as the center of the cannon in the input
+    cannons = [
         {"conv": Conv2d(np.array([[1, 1], [1, 0]])), "pad_width": ((1, 0), (1, 0)), "direction": np.array([1, 1])},
         {"conv": Conv2d(np.array([[1, 1], [0, 1]])), "pad_width": ((1, 0), (0, 1)), "direction": np.array([1, -1])},
         {"conv": Conv2d(np.array([[0, 1], [1, 1]])), "pad_width": ((0, 1), (0, 1)), "direction": np.array([-1, -1])},
@@ -60,31 +74,41 @@ def solve_6e19193c(x):
     ]
 
     projectiles = []
-    for source in sources:
-        conv = source["conv"]
-        pad_width = source["pad_width"]
-        direction = source["direction"]
-        conv_out = conv(ret_x)
+    for cannon in cannons:
+        # extract information from cannon dict
+        conv = cannon["conv"]
+        pad_width = cannon["pad_width"]
+        direction = cannon["direction"]
+        conv_out = conv(ret_x)  # feed the input through the convolution
+        # pad the conv output to position non-zero cell(s) over the center of the cannon(s)
         padded_conv_out = np.pad(conv_out, pad_width, mode="constant", constant_values=((0, 0), (0, 0)))
-        # TODO currently only handling case where there is at most one source of any given type
+        # A cell in the output will have a value of 3 * colour_number if the cells in the input which contributed to it
+        # matche the pattern in the kernel
         center_idx = np.where(padded_conv_out == 3 * colour_number)
         if center_idx[0].shape == (0,):
             continue
-        projectiles.append({"center": np.array([int(center_idx[0]), int(center_idx[1])]), "direction": direction})
+
+        for y, x in zip(*center_idx):
+            # create a projectile for each cannon which will travel from the cannons center in a direction
+            projectiles.append({"center": np.array([int(y), int(x)]), "direction": direction})
 
     # #TODO see about indexing np arrays with np arrays
+    # Step 2: draw the path of each projectile
     for projectile in projectiles:
-        # center is the cats cradle
         curr_idx = projectile["center"]
         direction = projectile["direction"]
         while True:
             try:
+                # move one step in direction
                 curr_idx += direction
                 #TODO make this more numpy-ey
                 if any(curr_idx < 0):
+                    # break if y or x in current position is negative
                     break
+                # draw on current position
                 ret_x[curr_idx[0], curr_idx[1]] = colour_number
             except IndexError:
+                # break if position is outside array
                 break
 
     return ret_x
