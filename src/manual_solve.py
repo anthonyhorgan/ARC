@@ -16,6 +16,29 @@ from itertools import product
 # Student ID:       17452572
 # Github repo url:  https://github.com/anthonyhorgan/ARC.git
 
+# problems solved:
+#   6e19193c - "projectiles"
+#   83302e8f - "paths and gardens"
+#   90c28cc7 - "shrink regions"
+#
+# Summary/Reflection
+# Numpy is the main tool that is used to solve the problems. Seeing as the input and output was specified as np arrays
+# it seemed logical to use the many useful features of numpy to manipulate the arrays
+# np.where proved to be a useful method when trying to identify important cells within the input
+#
+# My solution for "paths and gardens" and "projectiles" both had a common structure of identifying "objects" in the input (both functions
+# use np.where) before drawing on cells as needed to produce the input. In both cases, the drawing consisted of
+# drawing a colour on the current position in the grid, moving to the next grid position based on some rules and repeating.
+#
+# The only other python library function that used was itertools.product in "shrink regions". This could have been replaced
+# by np.meshgrid but I felt itertools.product simpler/cleared
+#
+# A commonality between "shrink regions" and "projectiles" was looping over parts of the input array to identify patterns.
+# In "projectile" I convolved a filter over the input to identify the "canons". In "shrink regions" I looped over the
+# columns and rows to identify and remove black columns/rows and also to identify the boundaries of the regions
+#
+# I tried to chose problems that were different from each other which explains why my solutions don't share that much code
+
 
 class Conv2d:
     '''
@@ -48,13 +71,13 @@ def solve_6e19193c(x):
     The cannons can be oriented to face 4 different directions.
     SE ■■  SW ■■  NW  ■  NE■
        ■       ■     ■■    ■■
-    Define the center of a cannon to be the cell which, if filled in would transform the v shape into a square
+    Define the center of a cannon to be the cell which, if floodfilled in would transform the v shape into a square
     Then we must draw the path of a projectile fired from the center in the direction that the cannon is facing.
     Don't draw on the center itself
 
     All training and test grids are solved correctly
     '''
-    # bird tails
+    # projectile path
     colour_number = np.max(x) # get colour to paint with. only one colour used per example (other than black)
     ret_x = np.copy(x)
     # Step 1. Identify the position and direction of each cannon in the input
@@ -92,7 +115,6 @@ def solve_6e19193c(x):
             # create a projectile for each cannon which will travel from the cannons center in a direction
             projectiles.append({"center": np.array([int(y), int(x)]), "direction": direction})
 
-    # #TODO see about indexing np arrays with np arrays
     # Step 2: draw the path of each projectile
     for projectile in projectiles:
         curr_idx = projectile["center"]
@@ -101,7 +123,6 @@ def solve_6e19193c(x):
             try:
                 # move one step in direction
                 curr_idx += direction
-                #TODO make this more numpy-ey
                 if any(curr_idx < 0):
                     # break if y or x in current position is negative
                     break
@@ -114,11 +135,10 @@ def solve_6e19193c(x):
     return ret_x
 
 
-def fill(a, pos, colour):
+def flood_fill(a, pos, colour):
     '''
     Helper function used in solve_83302e8f
-    Recursively fills in a black region (i.e. values are 0) in an array
-    Think of this function as the fill tool in MSPaint
+    flood floodfills black cells. The floodfill will be bounded by any cell other than black
     a: input array
     pos: current position to colour
     colour: which colour to paint with
@@ -126,24 +146,23 @@ def fill(a, pos, colour):
     height, width = a.shape
     y, x = pos
     a[y, x] = colour    # colour in current position
-    # If any of the cells beside the current cell (orthogonal directions) are black, call fill on that cell
+    # If any of the cells beside the current cell (orthogonal directions) are black, call floodfill on that cell
     # check east
     if x + 1 < width and not a[y, x + 1]:
-        fill(a, (y, x + 1), colour)
+        flood_fill(a, (y, x + 1), colour)
     # check south
     if y + 1 < height and not a[y + 1, x]:
-        fill(a, (y + 1, x), colour)
+        flood_fill(a, (y + 1, x), colour)
     # check west
     if x - 1 >= 0 and not a[y, x - 1]:
-        fill(a, (y, x - 1), colour)
+        flood_fill(a, (y, x - 1), colour)
     # check north
     if y - 1 >= 0 and not a[y - 1, x]:
-        fill(a, (y - 1, x), colour)
+        flood_fill(a, (y - 1, x), colour)
 
 
 def solve_83302e8f(x):
     '''
-    Colour in the maze
     The input array is divided up into equally-sized square regions.
     These regions are divided by walls. There are gaps in the wall which connect some regions. I will call these
     connected regions paths
@@ -159,9 +178,9 @@ def solve_83302e8f(x):
     x_grid = np.zeros_like(x)
     grid_colour = np.max(x)     # find out what colour the walls are. (the wall cells are the only non-black cells in the input)
     height, width = x.shape
-    # Construct an array of "completed walls". i.e. fill in the gaps in the walls from the input array
+    # Construct an array of "completed walls". i.e. floodfill in the gaps in the walls from the input array
     # We can deduce what the completed walls should look like by going around the cells at the edges
-    #     (i.e. cells where x=0 or x=-1 or y=0 or y=-1), if a cell contains a wall, then fill in the row or column
+    #     (i.e. cells where x=0 or x=-1 or y=0 or y=-1), if a cell contains a wall, then floodfill in the row or column
     #     with walls
     for i, j in zip(*np.where(x)):
         if j == 0 or j == width - 1:
@@ -171,9 +190,9 @@ def solve_83302e8f(x):
 
     # identify the gaps in the walls in the input array by comparing it with the completed walls array
     starting_points = np.where(x != x_grid)
-    # set these "gaps" as starting points for the paths and fill in the paths from there
+    # set these "gaps" as starting points for the paths and flood fill in the paths from there
     for starting_point in zip(*starting_points):
-        fill(ret_x, starting_point, path_colour)
+        flood_fill(ret_x, starting_point, path_colour)
     # once paths are coloured in, every black cell is a garden, so colour it in green
     ret_x[np.where(ret_x == 0)] = garden_colour
     return ret_x
@@ -236,6 +255,7 @@ def solve_90c28cc7(x):
     for (big_i, big_j), (small_i, small_j) in zip(big_idxs, small_idxs):
         ret_x[small_i, small_j] = x[big_i, big_j]
     return ret_x
+
 
 
 def main():
